@@ -1,0 +1,39 @@
+name: Build feed twice daily
+
+on:
+  schedule:
+    - cron: "0 3,15 * * *"   # 05:00 a 17:00 Evropa/Praha v létě (UTC+2)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Transform XML
+        env:
+          FEED_URL: ${{ secrets.FEED_URL }}
+        run: python transform.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
